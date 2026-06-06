@@ -75,7 +75,12 @@ export async function verifySessionToken(
     if (!payload.exp || payload.exp < Date.now()) return null;
 
     const user = getUserById(payload.userId);
-    if (!user) return null;
+
+    // For users registered via the backend (not in DEMO_USERS),
+    // trust the signed session payload.
+    if (!user) {
+      return payload;
+    }
 
     return {
       ...payload,

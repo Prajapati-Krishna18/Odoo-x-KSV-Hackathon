@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { authenticate } from "@/lib/auth/users";
 import { createSessionToken, SESSION_COOKIE } from "@/lib/auth/session";
 import { ROLE_DASHBOARDS } from "@/lib/auth/types";
+import axios from "axios";
+
+const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api/v1";
 
 export async function POST(request: NextRequest) {
   try {
@@ -15,24 +17,38 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const user = authenticate(email, password);
-    if (!user) {
-      return NextResponse.json(
-        { error: "Invalid email or password" },
-        { status: 401 }
-      );
-    }
+    // Call Express Backend Login
+    const backendRes = await axios.post(`${BACKEND_URL}/auth/login`, {
+      email,
+      password,
+    });
 
-    const token = await createSessionToken(user, Boolean(rememberMe));
+    const { accessToken, refreshToken, user } = backendRes.data.data;
+
+    // Determine role (Express returns roles array, e.g. ['admin'])
+    const expressRole = user.roles && user.roles.length > 0 ? user.roles[0] : "viewer";
+    
+    // Map backend role names to frontend role prefixes
+    let nextRole = "viewer";
+    if (expressRole === "admin") nextRole = "admin";
+    else if (expressRole === "procurement_officer" || expressRole === "procurement_manager") nextRole = "procurement";
+    else if (expressRole === "approver") nextRole = "manager";
+    else if (expressRole === "vendor") nextRole = "vendor";
+
+    const nextUser = {
+      id: user.id,
+      email: user.email,
+      name: `${user.firstName} ${user.lastName}`,
+      role: nextRole as "admin" | "procurement" | "manager" | "vendor",
+    };
+
+    const token = await createSessionToken(nextUser, Boolean(rememberMe));
     const response = NextResponse.json({
-      user: {
-        id: user.id,
-        email: user.email,
-        name: user.name,
-        role: user.role,
-        vendorId: user.vendorId,
-      },
-      redirectTo: ROLE_DASHBOARDS[user.role],
+      success: true,
+      accessToken,
+      refreshToken,
+      user: nextUser,
+      redirectTo: ROLE_DASHBOARDS[nextRole as "admin" | "procurement" | "manager" | "vendor"] || "/dashboard",
     });
 
     response.cookies.set(SESSION_COOKIE, token, {
@@ -44,7 +60,8 @@ export async function POST(request: NextRequest) {
     });
 
     return response;
-  } catch {
-    return NextResponse.json({ error: "Login failed" }, { status: 500 });
+  } catch (err: any) {
+    const errorMsg = err.response?.data?.message || "Login failed";
+    return NextResponse.json({ error: errorMsg }, { status: err.response?.status || 401 });
   }
 }

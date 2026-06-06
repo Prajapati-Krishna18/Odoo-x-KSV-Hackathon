@@ -14,6 +14,7 @@ const {
   forgotPasswordSchema,
   resetPasswordSchema,
   changePasswordSchema,
+  onboardingSchema,
 } = require('./auth.validator');
 
 const router = Router();
@@ -30,7 +31,7 @@ const router = Router();
  * /api/v1/auth/register:
  *   post:
  *     tags: [Auth]
- *     summary: Register a new user
+ *     summary: Register a new user or request access
  *     security: []
  *     requestBody:
  *       required: true
@@ -38,16 +39,19 @@ const router = Router();
  *         application/json:
  *           schema:
  *             type: object
- *             required: [email, password, firstName, lastName]
+ *             required: [email, firstName, lastName]
  *             properties:
  *               email: { type: string, format: email }
- *               password: { type: string, minLength: 8 }
+ *               password: { type: string, minLength: 8, description: "Optional for Request Access flow" }
  *               firstName: { type: string }
  *               lastName: { type: string }
  *               phone: { type: string }
+ *               organization: { type: string, description: "Organization name" }
+ *               role: { type: string, enum: [admin, procurement, manager, vendor], description: "Requested role" }
+ *               reason: { type: string, description: "Reason for access" }
  *     responses:
- *       201: { description: Registration successful }
- *       409: { description: Email already exists }
+ *       201: { description: Registration successful (returns token + user) }
+ *       409: { description: Email already exists (also returns token + user) }
  *       422: { description: Validation error }
  */
 router.post('/register', authLimiter, validate(registerSchema), AuthController.register);
@@ -180,5 +184,28 @@ router.post('/reset-password', authLimiter, validate(resetPasswordSchema), AuthC
  *       400: { description: Current password incorrect }
  */
 router.put('/change-password', authenticate, validate(changePasswordSchema), AuthController.changePassword);
+
+/**
+ * @swagger
+ * /api/v1/auth/onboarding:
+ *   put:
+ *     tags: [Auth]
+ *     summary: Mark onboarding as completed
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [onboardingCompleted]
+ *             properties:
+ *               onboardingCompleted: { type: boolean, enum: [true] }
+ *     responses:
+ *       200: { description: Onboarding completed }
+ *       401: { description: Unauthorized }
+ */
+router.put('/onboarding', authenticate, AuthController.completeOnboarding);
 
 module.exports = router;

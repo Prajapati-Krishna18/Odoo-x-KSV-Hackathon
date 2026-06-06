@@ -14,10 +14,18 @@ class AuthController {
    * POST /api/v1/auth/register
    */
   static register = asyncHandler(async (req, res) => {
-    const user = await AuthService.register(req.body);
-    ApiResponse.created(res, {
-      data: user,
-      message: 'Registration successful',
+    const result = await AuthService.register(req.body);
+    ApiResponse.success(res, {
+      data: {
+        token: result.accessToken,
+        refreshToken: result.refreshToken,
+        isNewUser: result.isNewUser,
+        user: result.user,
+      },
+      message: result.isNewUser
+        ? 'Welcome! Your account has been created successfully.'
+        : 'Welcome back! You have been logged in.',
+      statusCode: 201,
     });
   });
 
@@ -77,6 +85,16 @@ class AuthController {
     await AuthService.resetPassword(req.body.token, req.body.password);
     ApiResponse.success(res, {
       message: 'Password reset successful. Please login with your new password.',
+    });
+  });
+
+  /**
+   * PUT /api/v1/auth/onboarding
+   */
+  static completeOnboarding = asyncHandler(async (req, res) => {
+    await AuthService.completeOnboarding(req.user.id);
+    ApiResponse.success(res, {
+      message: 'Onboarding completed successfully',
     });
   });
 

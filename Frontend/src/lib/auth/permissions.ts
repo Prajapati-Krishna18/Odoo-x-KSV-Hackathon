@@ -71,7 +71,7 @@ export const PROTECTED_PATH_PREFIXES = [
   "/settings",
 ];
 
-export const PUBLIC_PATHS = ["/", "/login", "/signup", "/forgot-password", "/403"];
+export const PUBLIC_PATHS = ["/", "/login", "/signup", "/forgot-password", "/onboarding", "/403"];
 
 export function isPublicPath(pathname: string): boolean {
   return PUBLIC_PATHS.some(

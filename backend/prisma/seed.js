@@ -6,10 +6,9 @@
 // Run: node prisma/seed.js
 // ============================================
 
-const { PrismaClient } = require('@prisma/client');
+require('dotenv').config();
+const prisma = require('../src/config/database');
 const bcrypt = require('bcrypt');
-
-const prisma = new PrismaClient();
 
 async function main() {
   console.log('🌱 Seeding VendorBridge database...\n');
