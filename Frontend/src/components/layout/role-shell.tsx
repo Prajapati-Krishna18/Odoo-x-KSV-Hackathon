@@ -80,18 +80,18 @@ export function RoleShell({ role, children }: RoleShellProps) {
   const allNotifications = useStore((s) => s.notifications);
   const markNotificationRead = useStore((s) => s.markNotificationRead);
   const markAllNotificationsRead = useStore((s) => s.markAllNotificationsRead);
+  const profile = useStore((s) => s.profile);
+  const displayName = profile?.firstName ? `${profile.firstName} ${profile.lastName}` : (user?.name || "");
+  const displayEmail = profile?.email || user?.email || "";
+  const initials = profile?.firstName
+    ? (profile.firstName[0] + (profile.lastName?.[0] || "")).toUpperCase()
+    : (user?.name?.split(" ").map(n => n[0]).join("").toUpperCase() || "U");
 
   const notifCount = allNotifications.filter((n) => !n.read && (n.targetRole === role || n.targetRole === "all")).length;
   const notifications = allNotifications.filter((n) => n.targetRole === role || n.targetRole === "all").slice(0, 10);
 
   const navItems = ROLE_NAV[role];
   const dashboardHref = navItems[0].href;
-  const initials = user?.name
-    ?.split(" ")
-    .map((n) => n[0])
-    .join("")
-    .slice(0, 2)
-    .toUpperCase() || "VB";
 
   return (
     <div className="flex min-h-screen bg-slate-50">
@@ -238,7 +238,7 @@ export function RoleShell({ role, children }: RoleShellProps) {
                 {initials}
               </div>
               <div className="hidden sm:block text-left">
-                <p className="text-sm font-medium text-slate-900">{user?.name}</p>
+                <p className="text-sm font-medium text-slate-900">{displayName}</p>
                 <p className="text-xs text-slate-500">{ROLE_LABELS[role]}</p>
               </div>
               <ChevronDown className="h-4 w-4 text-slate-400 hidden sm:block" />
@@ -251,8 +251,8 @@ export function RoleShell({ role, children }: RoleShellProps) {
                 />
                 <div className="absolute right-0 z-50 mt-2 w-56 rounded-xl border border-slate-200 bg-white py-1 shadow-lg">
                   <div className="border-b border-slate-100 px-4 py-3">
-                    <p className="text-sm font-semibold text-slate-900">{user?.name}</p>
-                    <p className="text-xs text-slate-500">{user?.email}</p>
+                    <p className="text-sm font-semibold text-slate-900">{displayName}</p>
+                    <p className="text-xs text-slate-500">{displayEmail}</p>
                   </div>
                   {role === "vendor" && (
                     <Link

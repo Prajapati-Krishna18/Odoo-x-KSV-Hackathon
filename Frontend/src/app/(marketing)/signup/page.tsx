@@ -8,7 +8,7 @@ export default function SignupPage() {
       <div className="w-full max-w-md">
         <div className="text-center">
           <div className="flex justify-center">
-            <Logo size="xs" />
+            <Logo size="2xs" />
           </div>
           <h1 className="mt-6 text-2xl font-bold text-slate-900">Request access</h1>
           <p className="mt-2 text-sm text-slate-500">
