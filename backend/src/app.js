@@ -39,8 +39,11 @@ const app = express();
 app.use(helmet());
 
 // CORS
+const corsOrigins = process.env.CORS_ORIGIN
+  ? process.env.CORS_ORIGIN.split(",").map((s) => s.trim())
+  : ["http://localhost:3000", "https://vendorbridge-kfjl.onrender.com"];
 app.use(cors({
-  origin: process.env.CORS_ORIGIN || 'http://localhost:3000',
+  origin: corsOrigins,
   credentials: true,
 }));
 

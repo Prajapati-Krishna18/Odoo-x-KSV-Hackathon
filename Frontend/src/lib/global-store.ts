@@ -75,8 +75,19 @@ function id(prefix: string): string {
   return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
 }
 
+export interface UserProfile {
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string;
+  department: string;
+  designation: string;
+  avatar: string | null;
+}
+
 interface GlobalState {
   currentUser: AuthUser | null;
+  profile: UserProfile;
   purchaseOrders: PurchaseOrder[];
   vendors: Vendor[];
   rfqs: RFQ[];
@@ -88,6 +99,7 @@ interface GlobalState {
   auditLogs: AuditEntry[];
 
   setCurrentUser: (user: AuthUser | null) => void;
+  updateProfile: (data: Partial<UserProfile>, actorName: string, actorRole: string) => void;
 
   approvePO: (poId: string, actorName: string, actorRole: string) => void;
   rejectPO: (poId: string, actorName: string, actorRole: string, reason: string) => void;
@@ -121,6 +133,15 @@ export const useStore = create<GlobalState>()(
   persist(
     (set, get) => ({
       currentUser: null,
+      profile: {
+        firstName: "Alex",
+        lastName: "Rivera",
+        email: "alex.rivera@company.com",
+        phone: "+1 (555) 123-4567",
+        department: "Procurement",
+        designation: "Procurement Admin",
+        avatar: null,
+      },
       purchaseOrders: getMergedPOs(),
       vendors: getMergedVendors(),
       rfqs: [...seedRFQs],
@@ -136,6 +157,28 @@ export const useStore = create<GlobalState>()(
       auditLogs: [],
 
       setCurrentUser: (user) => set({ currentUser: user }),
+
+      updateProfile: (data, actorName, actorRole) => {
+        set((state) => ({
+          profile: { ...state.profile, ...data },
+          notifications: [{
+            id: id("n"), title: "Profile Updated",
+            message: `${actorName} updated their profile information`,
+            type: "info" as const, targetRole: "all", read: false, createdAt: now(),
+            href: "/settings/profile",
+          }, ...state.notifications],
+          activities: [{
+            id: id("act"), action: "profile_updated", actorName, actorRole, timestamp: now(),
+            entityType: "profile", entityId: actorName, entityName: `${state.profile.firstName} ${state.profile.lastName}`,
+            status: "updated",
+          }, ...state.activities],
+          auditLogs: [{
+            id: id("aud"), timestamp: now(), actorName, actorRole, action: "profile_updated",
+            entityType: "profile", entityId: actorName, entityName: `${state.profile.firstName} ${state.profile.lastName}`,
+            status: "updated", ipAddress: mockIP(), details: `Updated: ${Object.keys(data).join(", ")}`,
+          }, ...state.auditLogs],
+        }));
+      },
 
       canApprovePO: (poId) => {
         const po = get().purchaseOrders.find(p => p.id === poId);
@@ -395,6 +438,7 @@ export const useStore = create<GlobalState>()(
         notifications: state.notifications,
         activities: state.activities,
         auditLogs: state.auditLogs,
+        profile: state.profile,
       }),
     }
   )

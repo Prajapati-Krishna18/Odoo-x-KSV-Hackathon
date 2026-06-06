@@ -5,11 +5,12 @@ import { cn } from "@/lib/utils";
 interface LogoProps {
   className?: string;
   href?: string;
-  size?: "xs" | "sm" | "md" | "lg" | "xl";
+  size?: "2xs" | "xs" | "sm" | "md" | "lg" | "xl";
 }
 
 const sizes = {
-  xs: 80,
+  "2xs": 72,
+  xs: 96,
   sm: 120,
   md: 180,
   lg: 260,

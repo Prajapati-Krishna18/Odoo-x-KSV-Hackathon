@@ -9,7 +9,7 @@ export default function ForgotPasswordPage() {
       <div className="w-full max-w-sm">
         <div className="text-center">
           <div className="flex justify-center">
-            <Logo size="xs" />
+            <Logo size="2xs" />
           </div>
           <h1 className="mt-6 text-2xl font-bold text-slate-900">Reset your password</h1>
           <p className="mt-2 text-sm text-slate-500">
