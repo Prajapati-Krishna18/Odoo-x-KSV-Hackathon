@@ -15,3 +15,16 @@ services:
         sync: false
       - key: JWT_ACCESS_SECRET
         generateValue: true
+
+  - type: web
+    name: vendorbridge-frontend
+    env: node
+    plan: starter
+    rootDir: Frontend
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3000
