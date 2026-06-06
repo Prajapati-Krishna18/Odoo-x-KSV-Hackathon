@@ -322,7 +322,7 @@ erDiagram
 
 ## 🎥 Live Demo & Preview
 
-* **Production Application Link:** [Launch VendorBridge Web Client](https://vendorbridge-frontend.onrender.com)
+* **Production Application Link:** [Launch VendorBridge Web Client](https://vendorbridge-kfjl.onrender.com/)
 * **Video Pitch & System Walkthrough:** [Watch Project Pitch on YouTube (Placeholder)](#)
 
 ---
