@@ -1,8 +1,54 @@
+"use client";
+
+import { useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Logo } from "@/components/ui/logo";
+import { useStore } from "@/lib/global-store";
+import { CheckCircle } from "lucide-react";
 
 export default function SignupPage() {
+  const addAccessRequest = useStore((s) => s.addAccessRequest);
+  const [submitted, setSubmitted] = useState(false);
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [email, setEmail] = useState("");
+  const [organization, setOrganization] = useState("");
+  const [requestedRole, setRequestedRole] = useState("");
+  const [reason, setReason] = useState("");
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    addAccessRequest({ firstName, lastName, email, organization, requestedRole, reason });
+    setSubmitted(true);
+  }
+
+  if (submitted) {
+    return (
+      <div className="flex min-h-screen items-center justify-center px-4 py-12 bg-gradient-to-b from-slate-50 to-white">
+        <div className="w-full max-w-md text-center">
+          <div className="flex justify-center">
+            <div className="rounded-full bg-emerald-100 p-4">
+              <CheckCircle className="h-12 w-12 text-emerald-600" />
+            </div>
+          </div>
+          <h1 className="mt-6 text-2xl font-bold text-slate-900">Request submitted</h1>
+          <p className="mt-3 text-sm text-slate-500 leading-relaxed">
+            Your access request has been received. An administrator will review
+            your details and grant access shortly. You&apos;ll be notified once
+            your account is ready.
+          </p>
+          <Link
+            href="/login"
+            className="mt-8 inline-block rounded-lg bg-indigo-600 px-6 py-2.5 text-sm font-semibold text-white hover:bg-indigo-500 transition-colors"
+          >
+            Back to sign in
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex min-h-screen items-center justify-center px-4 py-12 bg-gradient-to-b from-slate-50 to-white">
       <div className="w-full max-w-md">
@@ -16,51 +62,46 @@ export default function SignupPage() {
           </p>
         </div>
 
-        <form className="mt-8 space-y-4">
+        <form onSubmit={handleSubmit} className="mt-8 space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label htmlFor="firstName" className="block text-sm font-medium text-slate-700">
-                First name
-              </label>
+              <label className="block text-sm font-medium text-slate-700">First name</label>
               <input
-                id="firstName" name="firstName" type="text" required
+                type="text" required value={firstName}
+                onChange={(e) => setFirstName(e.target.value)}
                 className="mt-1 block w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
               />
             </div>
             <div>
-              <label htmlFor="lastName" className="block text-sm font-medium text-slate-700">
-                Last name
-              </label>
+              <label className="block text-sm font-medium text-slate-700">Last name</label>
               <input
-                id="lastName" name="lastName" type="text" required
+                type="text" required value={lastName}
+                onChange={(e) => setLastName(e.target.value)}
                 className="mt-1 block w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
               />
             </div>
           </div>
           <div>
-            <label htmlFor="email" className="block text-sm font-medium text-slate-700">
-              Email
-            </label>
+            <label className="block text-sm font-medium text-slate-700">Email</label>
             <input
-              id="email" name="email" type="email" required
+              type="email" required value={email}
+              onChange={(e) => setEmail(e.target.value)}
               className="mt-1 block w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
             />
           </div>
           <div>
-            <label htmlFor="organization" className="block text-sm font-medium text-slate-700">
-              Organization
-            </label>
+            <label className="block text-sm font-medium text-slate-700">Organization</label>
             <input
-              id="organization" name="organization" type="text" required
+              type="text" required value={organization}
+              onChange={(e) => setOrganization(e.target.value)}
               className="mt-1 block w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
             />
           </div>
           <div>
-            <label htmlFor="role" className="block text-sm font-medium text-slate-700">
-              Role requested
-            </label>
+            <label className="block text-sm font-medium text-slate-700">Role requested</label>
             <select
-              id="role" name="role" required
+              required value={requestedRole}
+              onChange={(e) => setRequestedRole(e.target.value)}
               className="mt-1 block w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
             >
               <option value="">Select a role...</option>
@@ -71,11 +112,10 @@ export default function SignupPage() {
             </select>
           </div>
           <div>
-            <label htmlFor="reason" className="block text-sm font-medium text-slate-700">
-              Reason for access
-            </label>
+            <label className="block text-sm font-medium text-slate-700">Reason for access</label>
             <textarea
-              id="reason" name="reason" rows={3} required
+              rows={3} required value={reason}
+              onChange={(e) => setReason(e.target.value)}
               className="mt-1 block w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
               placeholder="Tell us why you need access..."
             />
