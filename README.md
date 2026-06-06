@@ -78,7 +78,7 @@ Strict role-based middleware guards every API controller and frontend view, veri
 
 VendorBridge is built on a decoupled, secure, multi-tier architecture to support high traffic and isolated scaling:
 
-```mermaid
+```
 graph TD
     subgraph Client Layer
         A[Next.js Web Client] -->|React / Zustand / Tailwind| B(State Sync / UI Routing)
