@@ -6,7 +6,7 @@ import {
 } from "@/lib/auth/permissions";
 import { ROLE_DASHBOARDS } from "@/lib/auth/types";
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   if (
