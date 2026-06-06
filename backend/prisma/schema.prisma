@@ -1,0 +1,723 @@
+// ============================================
+// VendorBridge ERP — Complete Prisma Schema
+// ============================================
+// Production-grade schema with UUID PKs, enums,
+// relations, cascade rules, indexes, soft delete,
+// and audit fields on every model.
+// ============================================
+
+generator client {
+  provider   = "prisma-client-js"
+  engineType = "library"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// =============================================
+// ENUMS
+// =============================================
+
+enum VendorStatus {
+  PENDING
+  ACTIVE
+  SUSPENDED
+  BLACKLISTED
+}
+
+enum RfqStatus {
+  DRAFT
+  PUBLISHED
+  CLOSED
+  CANCELLED
+  AWARDED
+}
+
+enum Priority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum InvitationStatus {
+  PENDING
+  SENT
+  ACCEPTED
+  DECLINED
+}
+
+enum QuotationStatus {
+  DRAFT
+  SUBMITTED
+  REVISED
+  ACCEPTED
+  REJECTED
+  WITHDRAWN
+}
+
+enum ApprovalStatus {
+  PENDING
+  IN_PROGRESS
+  APPROVED
+  REJECTED
+  ESCALATED
+}
+
+enum ApprovalAction {
+  APPROVED
+  REJECTED
+  ESCALATED
+  DELEGATED
+}
+
+enum POStatus {
+  DRAFT
+  PENDING_APPROVAL
+  APPROVED
+  SENT
+  ACKNOWLEDGED
+  COMPLETED
+  CANCELLED
+}
+
+enum InvoiceStatus {
+  DRAFT
+  SUBMITTED
+  VERIFIED
+  APPROVED
+  PAID
+  DISPUTED
+  CANCELLED
+}
+
+enum NotificationType {
+  RFQ_CREATED
+  RFQ_PUBLISHED
+  RFQ_CLOSED
+  VENDOR_INVITED
+  QUOTATION_RECEIVED
+  QUOTATION_ACCEPTED
+  QUOTATION_REJECTED
+  APPROVAL_REQUESTED
+  APPROVAL_APPROVED
+  APPROVAL_REJECTED
+  PO_GENERATED
+  PO_SENT
+  INVOICE_CREATED
+  INVOICE_VERIFIED
+  INVOICE_PAID
+  GENERAL
+}
+
+enum AuditAction {
+  INSERT
+  UPDATE
+  DELETE
+}
+
+enum EntityType {
+  RFQ
+  QUOTATION
+  PURCHASE_ORDER
+  INVOICE
+  VENDOR
+  USER
+}
+
+// =============================================
+// MODELS
+// =============================================
+
+// ---------- Users & Auth ----------
+
+model User {
+  id                  String    @id @default(uuid())
+  email               String    @unique
+  passwordHash        String    @map("password_hash")
+  firstName           String    @map("first_name")
+  lastName            String    @map("last_name")
+  phone               String?
+  avatarUrl           String?   @map("avatar_url")
+  isActive            Boolean   @default(true) @map("is_active")
+  lastLoginAt         DateTime? @map("last_login_at")
+  passwordChangedAt   DateTime? @map("password_changed_at")
+  failedLoginAttempts Int       @default(0) @map("failed_login_attempts")
+  lockedUntil         DateTime? @map("locked_until")
+  passwordResetToken  String?   @map("password_reset_token")
+  passwordResetExpiry DateTime? @map("password_reset_expiry")
+
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
+
+  // Relations
+  userRoles        UserRole[]
+  refreshTokens    RefreshToken[]
+  rfqsCreated      Rfq[]              @relation("RfqCreator")
+  rfqAttachments   RfqAttachment[]
+  vendorRatings    VendorRating[]      @relation("RatingAuthor")
+  approvalActions  ApprovalHistory[]
+  notifications    Notification[]
+  activityLogs     ActivityLog[]
+  approvalsStarted Approval[]         @relation("ApprovalInitiator")
+
+  @@index([email])
+  @@index([isActive])
+  @@map("users")
+}
+
+model Role {
+  id           String  @id @default(uuid())
+  name         String  @unique
+  description  String?
+  isSystemRole Boolean @default(false) @map("is_system_role")
+  isActive     Boolean @default(true) @map("is_active")
+
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
+
+  // Relations
+  userRoles       UserRole[]
+  rolePermissions RolePermission[]
+
+  @@index([name])
+  @@map("roles")
+}
+
+model Permission {
+  id          String  @id @default(uuid())
+  module      String
+  action      String
+  description String?
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  rolePermissions RolePermission[]
+
+  @@unique([module, action])
+  @@map("permissions")
+}
+
+model UserRole {
+  id     String @id @default(uuid())
+  userId String @map("user_id")
+  roleId String @map("role_id")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, roleId])
+  @@index([userId])
+  @@index([roleId])
+  @@map("user_roles")
+}
+
+model RolePermission {
+  id           String @id @default(uuid())
+  roleId       String @map("role_id")
+  permissionId String @map("permission_id")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  // Relations
+  role       Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@unique([roleId, permissionId])
+  @@index([roleId])
+  @@index([permissionId])
+  @@map("role_permissions")
+}
+
+model RefreshToken {
+  id        String    @id @default(uuid())
+  userId    String    @map("user_id")
+  tokenHash String    @map("token_hash")
+  expiresAt DateTime  @map("expires_at")
+  revokedAt DateTime? @map("revoked_at")
+  ipAddress String?   @map("ip_address")
+  userAgent String?   @map("user_agent")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([tokenHash])
+  @@index([userId])
+  @@map("refresh_tokens")
+}
+
+// ---------- Vendors ----------
+
+model Vendor {
+  id               String       @id @default(uuid())
+  companyName      String       @map("company_name")
+  contactPerson    String       @map("contact_person")
+  email            String       @unique
+  phone            String?
+  address          String?
+  city             String?
+  state            String?
+  country          String?
+  postalCode       String?      @map("postal_code")
+  taxId            String?      @map("tax_id")
+  website          String?
+  status           VendorStatus @default(PENDING)
+  categoryId       String?      @map("category_id")
+  trustScore       Float        @default(0) @map("trust_score")
+  totalOrders      Int          @default(0) @map("total_orders")
+  successfulOrders Int          @default(0) @map("successful_orders")
+
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
+  createdBy String?   @map("created_by")
+  updatedBy String?   @map("updated_by")
+
+  // Relations
+  category       VendorCategory? @relation(fields: [categoryId], references: [id])
+  ratings        VendorRating[]
+  rfqVendors     RfqVendor[]
+  purchaseOrders PurchaseOrder[]
+  invoices       Invoice[]
+
+  @@index([email])
+  @@index([status])
+  @@index([categoryId])
+  @@index([companyName])
+  @@map("vendors")
+}
+
+model VendorCategory {
+  id          String  @id @default(uuid())
+  name        String  @unique
+  description String?
+  parentId    String? @map("parent_id")
+  isActive    Boolean @default(true) @map("is_active")
+
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
+
+  // Relations
+  parent   VendorCategory?  @relation("CategoryHierarchy", fields: [parentId], references: [id])
+  children VendorCategory[] @relation("CategoryHierarchy")
+  vendors  Vendor[]
+  rfqs     Rfq[]
+
+  @@index([name])
+  @@index([parentId])
+  @@map("vendor_categories")
+}
+
+model VendorRating {
+  id                  String @id @default(uuid())
+  vendorId            String @map("vendor_id")
+  rfqId               String @map("rfq_id")
+  ratedBy             String @map("rated_by")
+  qualityScore        Float  @map("quality_score")
+  deliveryScore       Float  @map("delivery_score")
+  priceScore          Float  @map("price_score")
+  responsivenessScore Float  @map("responsiveness_score")
+  overallScore        Float  @map("overall_score")
+  comments            String?
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  vendor Vendor @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  rfq    Rfq    @relation(fields: [rfqId], references: [id])
+  rater  User   @relation("RatingAuthor", fields: [ratedBy], references: [id])
+
+  @@index([vendorId])
+  @@index([rfqId])
+  @@map("vendor_ratings")
+}
+
+// ---------- RFQs ----------
+
+model Rfq {
+  id                 String    @id @default(uuid())
+  rfqNumber          String    @unique @map("rfq_number")
+  title              String
+  description        String?
+  categoryId         String?   @map("category_id")
+  status             RfqStatus @default(DRAFT)
+  priority           Priority  @default(MEDIUM)
+  submissionDeadline DateTime? @map("submission_deadline")
+  budgetEstimate     Float?    @map("budget_estimate")
+  currency           String    @default("USD")
+  termsAndConditions String?   @map("terms_and_conditions")
+  evaluationCriteria Json?     @map("evaluation_criteria")
+
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
+  createdBy String    @map("created_by")
+  updatedBy String?   @map("updated_by")
+
+  // Relations
+  creator      User            @relation("RfqCreator", fields: [createdBy], references: [id])
+  category     VendorCategory? @relation(fields: [categoryId], references: [id])
+  items        RfqItem[]
+  attachments  RfqAttachment[]
+  rfqVendors   RfqVendor[]
+  vendorRatings VendorRating[]
+  approvals    Approval[]      @relation("RfqApprovals")
+  purchaseOrders PurchaseOrder[]
+
+  @@index([rfqNumber])
+  @@index([status])
+  @@index([categoryId])
+  @@index([createdBy])
+  @@index([submissionDeadline])
+  @@map("rfqs")
+}
+
+model RfqItem {
+  id                 String @id @default(uuid())
+  rfqId              String @map("rfq_id")
+  itemName           String @map("item_name")
+  description        String?
+  quantity           Float
+  unit               String  @default("pcs")
+  estimatedUnitPrice Float?  @map("estimated_unit_price")
+  specifications     Json?
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  rfq            Rfq             @relation(fields: [rfqId], references: [id], onDelete: Cascade)
+  quotationItems QuotationItem[]
+
+  @@index([rfqId])
+  @@map("rfq_items")
+}
+
+model RfqAttachment {
+  id         String @id @default(uuid())
+  rfqId      String @map("rfq_id")
+  fileName   String @map("file_name")
+  filePath   String @map("file_path")
+  fileSize   Int    @map("file_size")
+  mimeType   String @map("mime_type")
+  uploadedBy String @map("uploaded_by")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  // Relations
+  rfq      Rfq  @relation(fields: [rfqId], references: [id], onDelete: Cascade)
+  uploader User @relation(fields: [uploadedBy], references: [id])
+
+  @@index([rfqId])
+  @@map("rfq_attachments")
+}
+
+model RfqVendor {
+  id               String           @id @default(uuid())
+  rfqId            String           @map("rfq_id")
+  vendorId         String           @map("vendor_id")
+  invitationStatus InvitationStatus @default(PENDING) @map("invitation_status")
+  invitedAt        DateTime         @default(now()) @map("invited_at")
+  respondedAt      DateTime?        @map("responded_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  rfq        Rfq         @relation(fields: [rfqId], references: [id], onDelete: Cascade)
+  vendor     Vendor      @relation(fields: [vendorId], references: [id])
+  quotations Quotation[]
+
+  @@unique([rfqId, vendorId])
+  @@index([rfqId])
+  @@index([vendorId])
+  @@map("rfq_vendors")
+}
+
+// ---------- Quotations ----------
+
+model Quotation {
+  id              String          @id @default(uuid())
+  quotationNumber String          @unique @map("quotation_number")
+  rfqVendorId     String          @map("rfq_vendor_id")
+  totalAmount     Float           @map("total_amount")
+  currency        String          @default("USD")
+  validityDate    DateTime?       @map("validity_date")
+  terms           String?
+  notes           String?
+  status          QuotationStatus @default(DRAFT)
+  submittedAt     DateTime?       @map("submitted_at")
+  revisionNumber  Int             @default(1) @map("revision_number")
+
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
+
+  // Relations
+  rfqVendor      RfqVendor       @relation(fields: [rfqVendorId], references: [id])
+  items          QuotationItem[]
+  purchaseOrders PurchaseOrder[]
+
+  @@index([quotationNumber])
+  @@index([rfqVendorId])
+  @@index([status])
+  @@map("quotations")
+}
+
+model QuotationItem {
+  id         String  @id @default(uuid())
+  quotationId String @map("quotation_id")
+  rfqItemId  String  @map("rfq_item_id")
+  unitPrice  Float   @map("unit_price")
+  quantity   Float
+  totalPrice Float   @map("total_price")
+  remarks    String?
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  quotation       Quotation         @relation(fields: [quotationId], references: [id], onDelete: Cascade)
+  rfqItem         RfqItem           @relation(fields: [rfqItemId], references: [id])
+  purchaseOrderItems PurchaseOrderItem[]
+
+  @@index([quotationId])
+  @@index([rfqItemId])
+  @@map("quotation_items")
+}
+
+// ---------- Approvals ----------
+
+model Approval {
+  id          String         @id @default(uuid())
+  entityType  EntityType     @map("entity_type")
+  entityId    String         @map("entity_id")
+  rfqId       String?        @map("rfq_id")
+  currentStep Int            @default(1) @map("current_step")
+  totalSteps  Int            @default(1) @map("total_steps")
+  status      ApprovalStatus @default(PENDING)
+  initiatedBy String         @map("initiated_by")
+
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+
+  // Relations
+  rfq       Rfq?              @relation("RfqApprovals", fields: [rfqId], references: [id])
+  initiator User              @relation("ApprovalInitiator", fields: [initiatedBy], references: [id])
+  history   ApprovalHistory[]
+
+  @@index([entityType, entityId])
+  @@index([status])
+  @@index([initiatedBy])
+  @@map("approvals")
+}
+
+model ApprovalHistory {
+  id         String         @id @default(uuid())
+  approvalId String         @map("approval_id")
+  stepNumber Int            @map("step_number")
+  approverId String         @map("approver_id")
+  action     ApprovalAction
+  remarks    String?
+  actedAt    DateTime       @default(now()) @map("acted_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  // Relations
+  approval Approval @relation(fields: [approvalId], references: [id], onDelete: Cascade)
+  approver User     @relation(fields: [approverId], references: [id])
+
+  @@index([approvalId])
+  @@index([approverId])
+  @@map("approval_history")
+}
+
+// ---------- Purchase Orders ----------
+
+model PurchaseOrder {
+  id              String   @id @default(uuid())
+  poNumber        String   @unique @map("po_number")
+  rfqId           String   @map("rfq_id")
+  quotationId     String   @map("quotation_id")
+  vendorId        String   @map("vendor_id")
+  status          POStatus @default(DRAFT)
+  totalAmount     Float    @map("total_amount")
+  currency        String   @default("USD")
+  deliveryDate    DateTime? @map("delivery_date")
+  shippingAddress String?  @map("shipping_address")
+  paymentTerms    String?  @map("payment_terms")
+  notes           String?
+
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
+  createdBy String    @map("created_by")
+  updatedBy String?   @map("updated_by")
+
+  // Relations
+  rfq       Rfq                 @relation(fields: [rfqId], references: [id])
+  quotation Quotation           @relation(fields: [quotationId], references: [id])
+  vendor    Vendor              @relation(fields: [vendorId], references: [id])
+  items     PurchaseOrderItem[]
+  invoices  Invoice[]
+
+  @@index([poNumber])
+  @@index([status])
+  @@index([vendorId])
+  @@index([rfqId])
+  @@map("purchase_orders")
+}
+
+model PurchaseOrderItem {
+  id              String @id @default(uuid())
+  poId            String @map("po_id")
+  quotationItemId String @map("quotation_item_id")
+  itemName        String @map("item_name")
+  quantity        Float
+  unitPrice       Float  @map("unit_price")
+  totalPrice      Float  @map("total_price")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  purchaseOrder PurchaseOrder @relation(fields: [poId], references: [id], onDelete: Cascade)
+  quotationItem QuotationItem @relation(fields: [quotationItemId], references: [id])
+  invoiceItems  InvoiceItem[]
+
+  @@index([poId])
+  @@map("purchase_order_items")
+}
+
+// ---------- Invoices ----------
+
+model Invoice {
+  id               String        @id @default(uuid())
+  invoiceNumber    String        @unique @map("invoice_number")
+  poId             String        @map("po_id")
+  vendorId         String        @map("vendor_id")
+  status           InvoiceStatus @default(DRAFT)
+  totalAmount      Float         @map("total_amount")
+  taxAmount        Float         @default(0) @map("tax_amount")
+  grandTotal       Float         @map("grand_total")
+  currency         String        @default("USD")
+  dueDate          DateTime?     @map("due_date")
+  paidAt           DateTime?     @map("paid_at")
+  paymentReference String?       @map("payment_reference")
+
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
+  createdBy String    @map("created_by")
+  updatedBy String?   @map("updated_by")
+
+  // Relations
+  purchaseOrder PurchaseOrder @relation(fields: [poId], references: [id])
+  vendor        Vendor        @relation(fields: [vendorId], references: [id])
+  items         InvoiceItem[]
+
+  @@index([invoiceNumber])
+  @@index([status])
+  @@index([poId])
+  @@index([vendorId])
+  @@map("invoices")
+}
+
+model InvoiceItem {
+  id          String @id @default(uuid())
+  invoiceId   String @map("invoice_id")
+  poItemId    String @map("po_item_id")
+  description String
+  quantity    Float
+  unitPrice   Float  @map("unit_price")
+  totalPrice  Float  @map("total_price")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  invoice       Invoice           @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  purchaseOrderItem PurchaseOrderItem @relation(fields: [poItemId], references: [id])
+
+  @@index([invoiceId])
+  @@map("invoice_items")
+}
+
+// ---------- Notifications ----------
+
+model Notification {
+  id         String           @id @default(uuid())
+  userId     String           @map("user_id")
+  type       NotificationType @default(GENERAL)
+  title      String
+  message    String
+  isRead     Boolean          @default(false) @map("is_read")
+  readAt     DateTime?        @map("read_at")
+  entityType String?          @map("entity_type")
+  entityId   String?          @map("entity_id")
+  actionUrl  String?          @map("action_url")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([isRead])
+  @@index([userId, isRead])
+  @@map("notifications")
+}
+
+// ---------- Activity & Audit Logs ----------
+
+model ActivityLog {
+  id         String @id @default(uuid())
+  userId     String @map("user_id")
+  action     String
+  entityType String @map("entity_type")
+  entityId   String @map("entity_id")
+  details    Json?
+  ipAddress  String? @map("ip_address")
+  userAgent  String? @map("user_agent")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  // Relations
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([entityType, entityId])
+  @@index([createdAt])
+  @@map("activity_logs")
+}
+
+// Audit logs are IMMUTABLE — no update, no soft delete
+model AuditLog {
+  id        String      @id @default(uuid())
+  userId    String?     @map("user_id")
+  tableName String      @map("table_name")
+  recordId  String      @map("record_id")
+  action    AuditAction
+  oldValues Json?       @map("old_values")
+  newValues Json?       @map("new_values")
+  ipAddress String?     @map("ip_address")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([tableName, recordId])
+  @@index([userId])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
