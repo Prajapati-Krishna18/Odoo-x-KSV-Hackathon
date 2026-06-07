@@ -234,8 +234,12 @@ export function RoleShell({ role, children }: RoleShellProps) {
               onClick={() => setUserOpen(!userOpen)}
               className="flex items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-slate-100"
             >
-              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-indigo-100 text-sm font-semibold text-indigo-700">
-                {initials}
+              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-indigo-100 text-sm font-semibold text-indigo-700 overflow-hidden">
+                {profile?.avatar ? (
+                  <img src={profile.avatar} alt="" className="h-full w-full object-cover" />
+                ) : (
+                  initials
+                )}
               </div>
               <div className="hidden sm:block text-left">
                 <p className="text-sm font-medium text-slate-900">{displayName}</p>

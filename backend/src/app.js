@@ -73,11 +73,13 @@ app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
 // ──────────── Health Check ────────────
 
 app.get('/health', (req, res) => {
-  res.status(200).json({
-    success: true,
-    message: 'VendorBridge ERP is running',
+  const dbStatus = process.env.DB_CONNECTED === 'true';
+  res.status(dbStatus ? 200 : 503).json({
+    success: dbStatus,
+    message: dbStatus ? 'VendorBridge ERP is running' : 'Server is running but database is not connected',
     timestamp: new Date().toISOString(),
     environment: process.env.NODE_ENV,
+    database: dbStatus ? 'connected' : 'disconnected',
   });
 });
 

@@ -1,18 +1,8 @@
-// ============================================
-// Global Error Handler Middleware
-// ============================================
-// Why: Catches ALL errors (thrown or uncaught) in one place.
-// Maps ApiError subclasses to proper HTTP responses.
-// Logs unexpected errors for debugging.
-// Never leaks stack traces in production.
-// ============================================
-
 const logger = require('../config/logger');
 const { ApiError } = require('../utils/ApiError');
 
 // eslint-disable-next-line no-unused-vars
 const errorHandler = (err, req, res, next) => {
-  // Default values
   let statusCode = err.statusCode || 500;
   let message = err.message || 'Internal server error';
   let errors = err.errors || [];
@@ -30,9 +20,28 @@ const errorHandler = (err, req, res, next) => {
     message = 'Foreign key constraint failed';
   }
 
+  // Prisma connection errors — NEVER leak raw DB errors to client
+  if (
+    err?.constructor?.name?.includes('Prisma') ||
+    err.message?.includes('Can\'t reach database server') ||
+    err.message?.includes('connect ECONNREFUSED') ||
+    err.message?.includes('getaddrinfo ENOTFOUND') ||
+    err.message?.includes('Connection timed out') ||
+    err.message?.includes('prisma') ||
+    ['P1001', 'P1002', 'P1003', 'P1009', 'P1010', 'P1011'].includes(err.code)
+  ) {
+    statusCode = 503;
+    message = 'We are temporarily unable to process your request. Please try again later.';
+    logger.error(`DATABASE CONNECTION FAILED: ${err.message}`, {
+      stack: err.stack,
+      path: req.path,
+      method: req.method,
+    });
+  }
+
   // Log server errors
   if (statusCode >= 500) {
-    logger.error(`${statusCode} - ${message}`, {
+    logger.error(`${statusCode} - ${err.message}`, {
       error: err.message,
       stack: err.stack,
       path: req.path,
