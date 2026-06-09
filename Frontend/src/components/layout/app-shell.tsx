@@ -28,9 +28,10 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
-import { navItems, notifications, settingsNav } from "@/lib/data";
+import { navItems, settingsNav } from "@/lib/data";
 import { CountBadge } from "@/components/ui/badge";
 import { Logo } from "@/components/ui/logo";
+import { useStore } from "@/lib/global-store";
 
 const iconMap: Record<string, React.ElementType> = {
   LayoutDashboard,
@@ -44,7 +45,7 @@ const iconMap: Record<string, React.ElementType> = {
   ShieldCheck,
 };
 
-const unreadNotifications = notifications.filter((n) => !n.read).length;
+const unreadNotifications = 0;
 const unreadMessages = 1;
 
 export function AppShell({ children }: { children: React.ReactNode }) {
@@ -52,6 +53,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
   const [userOpen, setUserOpen] = useState(false);
+  const profile = useStore((s) => s.profile);
+  const storeNotifs = useStore((s) => s.notifications);
+  const displayName = profile?.firstName ? `${profile.firstName} ${profile.lastName}` : "Alex Rivera";
+  const displayEmail = profile?.email || "alex.rivera@company.com";
+  const initials = profile?.firstName
+    ? (profile.firstName[0] + (profile.lastName?.[0] || "")).toUpperCase()
+    : "AR";
+  const unreadCount = storeNotifs.filter((n) => !n.read).length;
 
   const isSettings = pathname.startsWith("/settings");
 
@@ -210,7 +219,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               className="relative rounded-lg p-2 text-slate-500 hover:bg-slate-100 hover:text-slate-700"
             >
               <Bell className="h-5 w-5" />
-              {unreadNotifications > 0 && (
+              {unreadCount > 0 && (
                 <span className="absolute right-1 top-1 h-2 w-2 rounded-full bg-red-500" />
               )}
             </Link>
@@ -230,8 +239,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 onClick={() => setUserOpen(!userOpen)}
                 className="flex items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-slate-100"
               >
-                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-indigo-100 text-sm font-semibold text-indigo-700">
-                  AR
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-indigo-100 text-sm font-semibold text-indigo-700 overflow-hidden">
+                  {profile?.avatar ? (
+                    <img src={profile.avatar} alt="" className="h-full w-full object-cover" />
+                  ) : (
+                    initials
+                  )}
                 </div>
                 <ChevronDown className="h-4 w-4 text-slate-400 hidden sm:block" />
               </button>
@@ -243,8 +256,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   />
                   <div className="absolute right-0 z-50 mt-2 w-56 rounded-xl border border-slate-200 bg-white py-1 shadow-lg">
                     <div className="border-b border-slate-100 px-4 py-3">
-                      <p className="text-sm font-semibold text-slate-900">Alex Rivera</p>
-                      <p className="text-xs text-slate-500">alex.rivera@company.com</p>
+                      <p className="text-sm font-semibold text-slate-900">{displayName}</p>
+                      <p className="text-xs text-slate-500">{displayEmail}</p>
                     </div>
                     <Link
                       href="/settings/profile"

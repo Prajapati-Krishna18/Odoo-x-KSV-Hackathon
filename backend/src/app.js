@@ -39,8 +39,11 @@ const app = express();
 app.use(helmet());
 
 // CORS
+const corsOrigins = process.env.CORS_ORIGIN
+  ? process.env.CORS_ORIGIN.split(",").map((s) => s.trim())
+  : ["http://localhost:3000", "https://vendorbridge-kfjl.onrender.com"];
 app.use(cors({
-  origin: process.env.CORS_ORIGIN || 'http://localhost:3000',
+  origin: corsOrigins,
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
@@ -72,11 +75,13 @@ app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
 // ──────────── Health Check ────────────
 
 app.get('/health', (req, res) => {
-  res.status(200).json({
-    success: true,
-    message: 'VendorBridge ERP is running',
+  const dbStatus = process.env.DB_CONNECTED === 'true';
+  res.status(dbStatus ? 200 : 503).json({
+    success: dbStatus,
+    message: dbStatus ? 'VendorBridge ERP is running' : 'Server is running but database is not connected',
     timestamp: new Date().toISOString(),
     environment: process.env.NODE_ENV,
+    database: dbStatus ? 'connected' : 'disconnected',
   });
 });
 

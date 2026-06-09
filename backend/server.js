@@ -21,6 +21,7 @@ const startServer = async () => {
     // Connect to database
     await prisma.$connect();
     logger.info('✅ PostgreSQL connected');
+    process.env.DB_CONNECTED = 'true';
 
     // Connect to Redis (lazy connect)
     try {
@@ -81,8 +82,28 @@ const startServer = async () => {
     });
 
   } catch (err) {
-    logger.error('Failed to start server:', err);
-    process.exit(1);
+    logger.error(`❌ Failed to connect to database: ${err.message}`);
+    logger.warn('⚠️ Server will start without database. All DB-dependent endpoints will return 503.');
+    process.env.DB_CONNECTED = 'false';
+
+    // Attempt to start HTTP server anyway so health check can report DB status
+    const server = app.listen(PORT, () => {
+      logger.info(`🚀 VendorBridge ERP running on port ${PORT} (NO DATABASE)`);
+      logger.info(`❤️ Health: http://localhost:${PORT}/health`);
+      logger.info(`🌍 Environment: ${process.env.NODE_ENV}`);
+    });
+
+    // Still attach graceful shutdown handlers for the no-DB case
+    const shutdown = async (signal) => {
+      logger.info(`\n${signal} received. Shutting down...`);
+      server.close(() => process.exit(0));
+      setTimeout(() => process.exit(1), 10000);
+    };
+
+    process.on('SIGTERM', () => shutdown('SIGTERM'));
+    process.on('SIGINT', () => shutdown('SIGINT'));
+    process.on('unhandledRejection', (err) => logger.error('Unhandled Rejection:', err));
+    process.on('uncaughtException', (err) => { logger.error('Uncaught Exception:', err); process.exit(1); });
   }
 };
 

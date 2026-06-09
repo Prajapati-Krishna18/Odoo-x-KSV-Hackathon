@@ -83,27 +83,57 @@ class EmailService {
   }
 
   static async sendPasswordReset({ to, name, resetToken }) {
-    const resetUrl = `${process.env.FRONTEND_URL}/reset-password?token=${resetToken}`;
+    const resetUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/reset-password?token=${resetToken}`;
     return this.send({
       to,
-      subject: '[VendorBridge] Password Reset Request',
+      subject: 'Reset Your VendorBridge Password',
       html: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; text-align: center;">
-            <h1 style="color: white; margin: 0;">VendorBridge</h1>
-          </div>
-          <div style="padding: 30px; background: #f9fafb;">
-            <h2>Password Reset</h2>
-            <p>Hello ${name},</p>
-            <p>You requested a password reset. Click the button below:</p>
-            <a href="${resetUrl}" style="display: inline-block; background: #667eea; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; margin-top: 15px;">
-              Reset Password
-            </a>
-            <p style="margin-top: 20px; color: #6b7280; font-size: 14px;">
-              This link expires in 1 hour. If you didn't request this, ignore this email.
-            </p>
-          </div>
-        </div>
+        <!DOCTYPE html>
+        <html>
+        <head><meta charset="utf-8"></head>
+        <body style="margin:0;padding:0;background:#f4f5f7;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+          <table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f5f7;padding:40px 20px;">
+            <tr>
+              <td align="center">
+                <table width="480" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.08);">
+                  <tr>
+                    <td style="background:linear-gradient(135deg,#6366f1,#4f46e5);padding:40px 30px;text-align:center;">
+                      <img src="https://vendorbridge-kfjl.onrender.com/Logo.png" alt="VendorBridge" width="120" style="display:block;margin:0 auto;" />
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style="padding:40px 30px;">
+                      <h2 style="margin:0 0 8px;font-size:22px;color:#1e293b;">Reset your password</h2>
+                      <p style="margin:0 0 24px;font-size:15px;color:#64748b;line-height:1.6;">
+                        Hello ${name},
+                      </p>
+                      <p style="margin:0 0 24px;font-size:15px;color:#64748b;line-height:1.6;">
+                        We received a request to reset your VendorBridge password. Click the button below to create a new password.
+                      </p>
+                      <table cellpadding="0" cellspacing="0" style="margin:0 auto 32px;">
+                        <tr>
+                          <td style="background:#6366f1;border-radius:8px;padding:12px 32px;text-align:center;">
+                            <a href="${resetUrl}" style="color:#ffffff;font-size:15px;font-weight:600;text-decoration:none;display:inline-block;">
+                              Reset Password
+                            </a>
+                          </td>
+                        </tr>
+                      </table>
+                      <p style="margin:0 0 24px;font-size:14px;color:#94a3b8;line-height:1.6;">
+                        This link expires in 30 minutes. If you did not request this change, you can safely ignore this email.
+                      </p>
+                      <hr style="border:none;border-top:1px solid #e2e8f0;margin:24px 0;" />
+                      <p style="margin:0;font-size:13px;color:#94a3b8;">
+                        VendorBridge Team &middot; Vendor Management Platform
+                      </p>
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+          </table>
+        </body>
+        </html>
       `,
     });
   }

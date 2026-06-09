@@ -75,8 +75,35 @@ function id(prefix: string): string {
   return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
 }
 
+export interface UserProfile {
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string;
+  department: string;
+  designation: string;
+  avatar: string | null;
+}
+
+export interface AccessRequest {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  organization: string;
+  requestedRole: string;
+  reason: string;
+  status: "pending" | "approved" | "rejected";
+  createdAt: string;
+  reviewedBy?: string;
+  reviewedAt?: string;
+  reviewNote?: string;
+}
+
 interface GlobalState {
   currentUser: AuthUser | null;
+  profile: UserProfile;
+  accessRequests: AccessRequest[];
   purchaseOrders: PurchaseOrder[];
   vendors: Vendor[];
   rfqs: RFQ[];
@@ -88,6 +115,10 @@ interface GlobalState {
   auditLogs: AuditEntry[];
 
   setCurrentUser: (user: AuthUser | null) => void;
+  updateProfile: (data: Partial<UserProfile>, actorName: string, actorRole: string) => void;
+  addAccessRequest: (req: Omit<AccessRequest, "id" | "createdAt" | "status">) => void;
+  approveAccessRequest: (id: string, actorName: string, actorRole: string) => void;
+  rejectAccessRequest: (id: string, actorName: string, actorRole: string, note?: string) => void;
 
   approvePO: (poId: string, actorName: string, actorRole: string) => void;
   rejectPO: (poId: string, actorName: string, actorRole: string, reason: string) => void;
@@ -121,6 +152,15 @@ export const useStore = create<GlobalState>()(
   persist(
     (set, get) => ({
       currentUser: null,
+      profile: {
+        firstName: "Alex",
+        lastName: "Rivera",
+        email: "alex.rivera@company.com",
+        phone: "+1 (555) 123-4567",
+        department: "Procurement",
+        designation: "Procurement Admin",
+        avatar: null,
+      },
       purchaseOrders: getMergedPOs(),
       vendors: getMergedVendors(),
       rfqs: [...seedRFQs],
@@ -134,8 +174,108 @@ export const useStore = create<GlobalState>()(
       } as SystemNotification)),
       activities: [],
       auditLogs: [],
+      accessRequests: [],
 
       setCurrentUser: (user) => set({ currentUser: user }),
+
+      updateProfile: (data, actorName, actorRole) => {
+        set((state) => ({
+          profile: { ...state.profile, ...data },
+          notifications: [{
+            id: id("n"), title: "Profile Updated",
+            message: `${actorName} updated their profile information`,
+            type: "info" as const, targetRole: "all", read: false, createdAt: now(),
+            href: "/settings/profile",
+          }, ...state.notifications],
+          activities: [{
+            id: id("act"), action: "profile_updated", actorName, actorRole, timestamp: now(),
+            entityType: "profile", entityId: actorName, entityName: `${state.profile.firstName} ${state.profile.lastName}`,
+            status: "updated",
+          }, ...state.activities],
+          auditLogs: [{
+            id: id("aud"), timestamp: now(), actorName, actorRole, action: "profile_updated",
+            entityType: "profile", entityId: actorName, entityName: `${state.profile.firstName} ${state.profile.lastName}`,
+            status: "updated", ipAddress: mockIP(), details: `Updated: ${Object.keys(data).join(", ")}`,
+          }, ...state.auditLogs],
+        }));
+      },
+
+      addAccessRequest: (req) => {
+        const newReq: AccessRequest = {
+          ...req,
+          id: id("ar"),
+          status: "pending",
+          createdAt: now(),
+        };
+        set((state) => ({
+          accessRequests: [newReq, ...state.accessRequests],
+          notifications: [{
+            id: id("n"), title: "New Access Request",
+            message: `${req.firstName} ${req.lastName} requested access as ${req.requestedRole}`,
+            type: "info" as const, targetRole: "admin", read: false, createdAt: now(),
+            href: "/admin/users/access-requests",
+          }, ...state.notifications],
+          activities: [{
+            id: id("act"), action: "access_requested", actorName: `${req.firstName} ${req.lastName}`,
+            actorRole: "vendor", timestamp: now(),
+            entityType: "access_request", entityId: newReq.id,
+            entityName: `${req.firstName} ${req.lastName} (${req.email})`,
+            status: "pending",
+          }, ...state.activities],
+        }));
+      },
+
+      approveAccessRequest: (reqId, actorName, actorRole) => {
+        set((state) => ({
+          accessRequests: state.accessRequests.map((r) =>
+            r.id === reqId ? { ...r, status: "approved", reviewedBy: actorName, reviewedAt: now() } : r
+          ),
+          notifications: [{
+            id: id("n"), title: "Access Request Approved",
+            message: `${state.accessRequests.find(r => r.id === reqId)?.firstName || ""} ${state.accessRequests.find(r => r.id === reqId)?.lastName || ""} was granted access`,
+            type: "success" as const, targetRole: "all", read: false, createdAt: now(),
+            href: "/admin/users",
+          }, ...state.notifications],
+          activities: [{
+            id: id("act"), action: "approved", actorName, actorRole, timestamp: now(),
+            entityType: "access_request", entityId: reqId,
+            entityName: `${state.accessRequests.find(r => r.id === reqId)?.firstName || ""} ${state.accessRequests.find(r => r.id === reqId)?.lastName || ""}`,
+            status: "approved",
+          }, ...state.activities],
+          auditLogs: [{
+            id: id("aud"), timestamp: now(), actorName, actorRole, action: "access_request_approved",
+            entityType: "access_request", entityId: reqId,
+            entityName: state.accessRequests.find(r => r.id === reqId)?.email || reqId,
+            status: "approved", ipAddress: mockIP(), details: "Access request approved",
+          }, ...state.auditLogs],
+        }));
+      },
+
+      rejectAccessRequest: (reqId, actorName, actorRole, note) => {
+        set((state) => ({
+          accessRequests: state.accessRequests.map((r) =>
+            r.id === reqId ? { ...r, status: "rejected", reviewedBy: actorName, reviewedAt: now(), reviewNote: note } : r
+          ),
+          notifications: [{
+            id: id("n"), title: "Access Request Rejected",
+            message: `${state.accessRequests.find(r => r.id === reqId)?.firstName || ""} ${state.accessRequests.find(r => r.id === reqId)?.lastName || ""}'s request was declined`,
+            type: "alert" as const, targetRole: "all", read: false, createdAt: now(),
+            href: "/admin/users/access-requests",
+          }, ...state.notifications],
+          activities: [{
+            id: id("act"), action: "rejected", actorName, actorRole, timestamp: now(),
+            entityType: "access_request", entityId: reqId,
+            entityName: `${state.accessRequests.find(r => r.id === reqId)?.firstName || ""} ${state.accessRequests.find(r => r.id === reqId)?.lastName || ""}`,
+            status: "rejected", comments: note,
+          }, ...state.activities],
+          auditLogs: [{
+            id: id("aud"), timestamp: now(), actorName, actorRole, action: "access_request_rejected",
+            entityType: "access_request", entityId: reqId,
+            entityName: state.accessRequests.find(r => r.id === reqId)?.email || reqId,
+            status: "rejected", ipAddress: mockIP(), details: note || "Access request rejected",
+          }, ...state.auditLogs],
+        }));
+      },
 
       canApprovePO: (poId) => {
         const po = get().purchaseOrders.find(p => p.id === poId);
@@ -395,6 +535,8 @@ export const useStore = create<GlobalState>()(
         notifications: state.notifications,
         activities: state.activities,
         auditLogs: state.auditLogs,
+        profile: state.profile,
+        accessRequests: state.accessRequests,
       }),
     }
   )

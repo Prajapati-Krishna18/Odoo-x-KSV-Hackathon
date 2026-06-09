@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, FormEvent } from "react";
-import { useRouter } from "next/navigation";
+import { useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Logo } from "@/components/ui/logo";
+import { useStore } from "@/lib/global-store";
+import { CheckCircle } from "lucide-react";
 
 export default function SignupPage() {
   const router = useRouter();
@@ -101,7 +102,7 @@ export default function SignupPage() {
       <div className="w-full max-w-md">
         <div className="text-center">
           <div className="flex justify-center">
-            <Logo size="xs" />
+            <Logo size="2xs" />
           </div>
           <h1 className="mt-6 text-2xl font-bold text-slate-900">Request access</h1>
           <p className="mt-2 text-sm text-slate-500">
@@ -110,7 +111,7 @@ export default function SignupPage() {
         </div>
 
         {error && (
-          <div className="mt-4 rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
+++        <div className="mt-4 rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
             {error}
           </div>
         )}
@@ -118,9 +119,7 @@ export default function SignupPage() {
         <form onSubmit={handleSubmit} className="mt-8 space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label htmlFor="firstName" className="block text-sm font-medium text-slate-700">
-                First name
-              </label>
+              <label className="block text-sm font-medium text-slate-700">First name</label>
               <input
                 id="firstName" name="firstName" type="text" required
                 value={form.firstName}
@@ -129,9 +128,7 @@ export default function SignupPage() {
               />
             </div>
             <div>
-              <label htmlFor="lastName" className="block text-sm font-medium text-slate-700">
-                Last name
-              </label>
+              <label className="block text-sm font-medium text-slate-700">Last name</label>
               <input
                 id="lastName" name="lastName" type="text" required
                 value={form.lastName}
@@ -141,9 +138,7 @@ export default function SignupPage() {
             </div>
           </div>
           <div>
-            <label htmlFor="email" className="block text-sm font-medium text-slate-700">
-              Email
-            </label>
+            <label className="block text-sm font-medium text-slate-700">Email</label>
             <input
               id="email" name="email" type="email" required
               value={form.email}
@@ -152,9 +147,7 @@ export default function SignupPage() {
             />
           </div>
           <div>
-            <label htmlFor="organization" className="block text-sm font-medium text-slate-700">
-              Organization
-            </label>
+            <label className="block text-sm font-medium text-slate-700">Organization</label>
             <input
               id="organization" name="organization" type="text" required
               value={form.organization}
@@ -163,9 +156,7 @@ export default function SignupPage() {
             />
           </div>
           <div>
-            <label htmlFor="role" className="block text-sm font-medium text-slate-700">
-              Role requested
-            </label>
+            <label className="block text-sm font-medium text-slate-700">Role requested</label>
             <select
               id="role" name="role" required
               value={form.role}
@@ -180,9 +171,7 @@ export default function SignupPage() {
             </select>
           </div>
           <div>
-            <label htmlFor="reason" className="block text-sm font-medium text-slate-700">
-              Reason for access
-            </label>
+            <label className="block text-sm font-medium text-slate-700">Reason for access</label>
             <textarea
               id="reason" name="reason" rows={3} required
               value={form.reason}

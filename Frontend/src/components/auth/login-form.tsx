@@ -64,10 +64,10 @@ export function LoginForm() {
         </div>
 
         <div className="relative z-10 flex-1 flex items-center justify-center p-10 xl:p-14 2xl:p-16">
-          <div className="w-full max-w-[550px]">
+          <div className="w-full max-w-[700px]">
             <Logo size="xs" />
 
-            <h1 className="mt-10 text-[2.5rem] xl:text-[3rem] 2xl:text-[3.5rem] font-bold leading-[1.1] tracking-[-0.03em] text-slate-900">
+            <h1 className="mt-10 text-5xl xl:text-6xl 2xl:text-[72px] font-extrabold leading-[1.05] tracking-[-0.03em] text-slate-900">
               Enterprise vendor
               <br />
               management,
@@ -75,18 +75,18 @@ export function LoginForm() {
               <span className="bg-gradient-to-r from-blue-600 via-indigo-500 to-cyan-500 bg-clip-text text-transparent">secured.</span>
             </h1>
 
-            <p className="mt-6 text-base xl:text-lg text-slate-500 leading-relaxed">
+            <p className="mt-6 text-lg xl:text-[22px] leading-[1.8] text-slate-500 max-w-[600px]">
               Role-based access for admins, procurement teams, managers, and vendors — all in one platform.
             </p>
 
-            <div className="mt-10 grid grid-cols-4 gap-3">
+            <div className="mt-10 grid grid-cols-4 gap-4">
               {KPIS.map((kpi) => {
                 const Icon = kpi.icon;
                 return (
-                  <div key={kpi.label} className="flex flex-col items-center justify-center rounded-xl border border-slate-200 bg-white/80 p-3 text-center backdrop-blur-sm shadow-sm min-h-[80px]">
-                    <Icon className="h-4 w-4 text-indigo-500 mb-1.5" />
-                    <p className="text-lg font-bold text-slate-900 leading-none">{kpi.value}</p>
-                    <p className="text-[10px] text-slate-500 leading-tight mt-1">{kpi.label}</p>
+                  <div key={kpi.label} className="flex flex-col items-center justify-center rounded-xl border border-slate-200 bg-white/90 p-4 text-center backdrop-blur-sm shadow-sm hover:shadow-md transition-shadow min-h-[90px]">
+                    <Icon className="h-5 w-5 text-indigo-500 mb-2" />
+                    <p className="text-xl font-bold text-slate-900 leading-none">{kpi.value}</p>
+                    <p className="text-xs text-slate-500 leading-tight mt-1">{kpi.label}</p>
                   </div>
                 );
               })}
@@ -97,13 +97,13 @@ export function LoginForm() {
                 <Sparkles className="h-3.5 w-3.5 text-indigo-500" />
                 Platform capabilities
               </p>
-              <div className="grid grid-cols-4 gap-2">
+              <div className="grid grid-cols-4 gap-2.5">
                 {FEATURES.map((f) => {
                   const Icon = f.icon;
                   return (
-                    <div key={f.label} className="flex items-center gap-1.5 rounded-lg bg-white/60 px-2.5 py-2 border border-slate-100 min-h-[32px]">
-                      <Icon className="h-3.5 w-3.5 text-indigo-500 shrink-0" />
-                      <span className="text-[11px] text-slate-700 leading-tight">{f.label}</span>
+                    <div key={f.label} className="flex items-center gap-2 rounded-lg bg-white/80 px-3 py-2.5 border border-slate-100 min-h-[36px] hover:border-slate-200 hover:shadow-sm transition-all">
+                      <Icon className="h-4 w-4 text-indigo-500 shrink-0" />
+                      <span className="text-xs text-slate-700 font-medium leading-tight">{f.label}</span>
                     </div>
                   );
                 })}
