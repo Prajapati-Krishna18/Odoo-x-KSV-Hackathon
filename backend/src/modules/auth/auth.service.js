@@ -22,39 +22,82 @@ const {
 class AuthService {
   // ──────────── Register ────────────
 
-  static async register({ email, password, firstName, lastName, phone }) {
+  static async register({ email, firstName, lastName, organization, role, reason }) {
     // Check if user exists
-    const existing = await AuthRepository.findUserByEmail(email);
-    if (existing) {
-      throw new ConflictError('Email already registered');
+    let user = await AuthRepository.findUserByEmail(email);
+    let isNewUser = false;
+    
+    if (!user) {
+      isNewUser = true;
+
+      // Create user with new schema properties
+      user = await AuthRepository.createUser({
+        email,
+        firstName,
+        lastName,
+        organization,
+        reason,
+        role,
+        status: 'active',
+        isApproved: true,
+        onboardingCompleted: false,
+      });
+
+      // Link UserRole (map frontend role names to DB role names)
+      const roleMap = {
+        admin: 'admin',
+        procurement: 'procurement_officer',
+        manager: 'approver',
+        vendor: 'vendor',
+      };
+      const dbRoleName = roleMap[role] || 'viewer';
+      await AuthRepository.assignRoleByName(user.id, dbRoleName);
+
+      // Log audit
+      await AuditService.log({
+        userId: user.id,
+        tableName: 'users',
+        recordId: user.id,
+        action: 'INSERT',
+        newValues: { email, firstName, lastName, role, organization },
+      });
+
+      // Refetch user with mapped roles/permissions for the login payload
+      user = await AuthRepository.findUserByEmail(email);
     }
 
-    // Hash password
-    const saltRounds = parseInt(process.env.BCRYPT_SALT_ROUNDS) || 12;
-    const passwordHash = await bcrypt.hash(password, saltRounds);
+    // Now log the user in (generate tokens)
+    const accessToken = this.generateAccessToken(user);
+    const refreshToken = this.generateRefreshToken();
 
-    // Create user
-    const user = await AuthRepository.createUser({
-      email,
-      passwordHash,
-      firstName,
-      lastName,
-      phone,
-    });
+    const tokenHash = crypto
+      .createHash('sha256')
+      .update(refreshToken)
+      .digest('hex');
 
-    // Assign default viewer role
-    await AuthRepository.assignDefaultRole(user.id);
-
-    // Audit
-    await AuditService.log({
+    await AuthRepository.createRefreshToken({
       userId: user.id,
-      tableName: 'users',
-      recordId: user.id,
-      action: 'INSERT',
-      newValues: { email, firstName, lastName },
+      tokenHash,
+      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
     });
 
-    return user;
+    return {
+      accessToken,
+      refreshToken,
+      isNewUser,
+      user: {
+        id: user.id,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        organization: user.organization,
+        role: user.role,
+        reason: user.reason,
+        status: user.status,
+        isApproved: user.isApproved,
+        onboardingCompleted: user.onboardingCompleted,
+      },
+    };
   }
 
   // ──────────── Login ────────────
@@ -75,6 +118,9 @@ class AuthService {
     }
 
     // Verify password
+    if (!user.passwordHash) {
+      throw new UnauthorizedError('No password set. Please use "Forgot Password" to set one.');
+    }
     const isValid = await bcrypt.compare(password, user.passwordHash);
     if (!isValid) {
       // Increment failed attempts
@@ -260,12 +306,23 @@ class AuthService {
     });
   }
 
+  // ──────────── Complete Onboarding ────────────
+
+  static async completeOnboarding(userId) {
+    return AuthRepository.updateUser(userId, {
+      onboardingCompleted: true,
+    });
+  }
+
   // ──────────── Change Password ────────────
 
   static async changePassword(userId, currentPassword, newPassword) {
     const user = await AuthRepository.findUserById(userId);
     if (!user) throw new NotFoundError('User');
 
+    if (!user.passwordHash) {
+      throw new BadRequestError('No password set. Please use "Forgot Password" to set one.');
+    }
     const isValid = await bcrypt.compare(currentPassword, user.passwordHash);
     if (!isValid) {
       throw new BadRequestError('Current password is incorrect');

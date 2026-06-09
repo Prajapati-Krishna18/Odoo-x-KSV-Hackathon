@@ -19,6 +19,16 @@ interface AuthContextValue {
     password: string,
     rememberMe: boolean
   ) => Promise<{ error?: string }>;
+  register: (
+    data: {
+      firstName: string;
+      lastName: string;
+      email: string;
+      organization: string;
+      role: string;
+      reason: string;
+    }
+  ) => Promise<{ error?: string }>;
   logout: () => Promise<void>;
   refresh: () => Promise<void>;
 }
@@ -66,21 +76,69 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return { error: data.error || "Login failed" };
     }
 
+    if (data.accessToken) {
+      localStorage.setItem("access_token", data.accessToken);
+    }
+    if (data.refreshToken) {
+      localStorage.setItem("refresh_token", data.refreshToken);
+    }
+
     setUser(data.user);
     router.push(data.redirectTo);
     router.refresh();
     return {};
   };
 
+  const register = async (data: {
+    firstName: string;
+    lastName: string;
+    email: string;
+    organization: string;
+    role: string;
+    reason: string;
+  }) => {
+    const res = await fetch("/api/auth/register", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    });
+
+    const resData = await res.json();
+    if (!res.ok) {
+      return { error: resData.error || "Registration failed" };
+    }
+
+    if (resData.token) {
+      localStorage.setItem("access_token", resData.token);
+    }
+    if (resData.refreshToken) {
+      localStorage.setItem("refresh_token", resData.refreshToken);
+    }
+
+    setUser(resData.user);
+    router.push(resData.redirectTo || "/dashboard");
+    router.refresh();
+    return {};
+  };
+
   const logout = async () => {
-    await fetch("/api/auth/logout", { method: "POST" });
+    const refreshToken = localStorage.getItem("refresh_token");
+    if (refreshToken) {
+      await fetch("/api/auth/logout", { 
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ refreshToken })
+      });
+    }
+    localStorage.removeItem("access_token");
+    localStorage.removeItem("refresh_token");
     setUser(null);
     router.push("/login");
     router.refresh();
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout, refresh }}>
+    <AuthContext.Provider value={{ user, loading, login, register, logout, refresh }}>
       {children}
     </AuthContext.Provider>
   );

@@ -12,7 +12,24 @@ class AuthRepository {
   static async findUserByEmail(email) {
     return prisma.user.findUnique({
       where: { email, deletedAt: null },
-      include: {
+      select: {
+        id: true,
+        email: true,
+        passwordHash: true,
+        firstName: true,
+        lastName: true,
+        phone: true,
+        organization: true,
+        role: true,
+        reason: true,
+        status: true,
+        isApproved: true,
+        onboardingCompleted: true,
+        isActive: true,
+        failedLoginAttempts: true,
+        lockedUntil: true,
+        lastLoginAt: true,
+        createdAt: true,
         userRoles: {
           include: {
             role: {
@@ -43,6 +60,12 @@ class AuthRepository {
         firstName: true,
         lastName: true,
         phone: true,
+        organization: true,
+        role: true,
+        reason: true,
+        status: true,
+        isApproved: true,
+        onboardingCompleted: true,
         createdAt: true,
       },
     });
@@ -90,6 +113,20 @@ class AuthRepository {
         data: { userId, roleId: viewerRole.id },
       });
     }
+  }
+
+  static async assignRoleByName(userId, roleName) {
+    const role = await prisma.role.findUnique({
+      where: { name: roleName },
+    });
+
+    if (role) {
+      await prisma.userRole.create({
+        data: { userId, roleId: role.id },
+      });
+      return role;
+    }
+    return null;
   }
 
   static async findUserByResetToken(token) {

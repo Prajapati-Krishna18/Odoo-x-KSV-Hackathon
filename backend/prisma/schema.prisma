@@ -135,7 +135,7 @@ enum EntityType {
 model User {
   id                  String    @id @default(uuid())
   email               String    @unique
-  passwordHash        String    @map("password_hash")
+  passwordHash        String?   @map("password_hash")
   firstName           String    @map("first_name")
   lastName            String    @map("last_name")
   phone               String?
@@ -147,6 +147,12 @@ model User {
   lockedUntil         DateTime? @map("locked_until")
   passwordResetToken  String?   @map("password_reset_token")
   passwordResetExpiry DateTime? @map("password_reset_expiry")
+  organization        String?   @map("organization")
+  reason              String?   @map("reason")
+  status              String    @default("active") @map("status")
+  isApproved          Boolean   @default(true) @map("is_approved")
+  onboardingCompleted Boolean   @default(false) @map("onboarding_completed")
+  role                String?   @map("role")
 
   createdAt DateTime  @default(now()) @map("created_at")
   updatedAt DateTime  @updatedAt @map("updated_at")
